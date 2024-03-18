@@ -1,10 +1,24 @@
-import { findBooking } from "../model/model";
+import { findBooking } from '../model/model';
 
-export const postBooking = async (req, res) => {
+export const authorizeUser = async (req: Request, res: Response) => {
+    // add JWT to authorize user, make each endpoint require this token before sending a response
+}
+
+export const postBooking = async (req: Request, res: Response) => {
     const booking = await findBooking()
 
-    ...
+    // ...
+}
+
+export const getBookings = async (req: Request, res: Response) => {
 
 }
 
-// TODO: add all the rest of the controller functions
+export const getBookingHistory = async (req: Request, res: Response) => {
+
+}
+
+
+export const getCredits = async (req: Request, res: Response) => {
+
+}

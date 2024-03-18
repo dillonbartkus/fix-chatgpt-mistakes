@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import bodyParser from 'body-parser';
-import sequelize from './db/client';
-import { Booking, Credit, BookingStatusHistory } from './db/model';
+import sqlzClient from './db/client';
+import { fn, Op, col, literal } from "sequelize";
+import { Booking, Credit, BookingStatusHistory } from './db/schema';
 import routes from './routes/routes';
 
 const app = express();
@@ -11,9 +12,10 @@ const port = process.env.PORT || 3001;
 app.use(bodyParser.json());
 
 // Fallback function to execute raw SQL queries if the need arises
-async function executeQuery(query: string, params: Record<string, any> = []) {
-    const connection = await sequelize.getConnection();
+export async function executeQuery(query: string, params: Record<string, any> = []) {
+    const connection = await sqlzClient.authenticate();
     try {
+        // parse query and params, validate / sanitize to prevent unwanted behavior. Make sure you are returning the proper data
         const [rows] = await connection.query(query, params);
         return rows;
     } catch (error) {
@@ -23,17 +25,17 @@ async function executeQuery(query: string, params: Record<string, any> = []) {
 
 // TODO: Consider moving these helper functions to their own file in /lib, or creating a Model for the DB for both types of stats
 // Function to get statistics on canceled and rescheduled bookings for a specific provider
-export async function getStats(providerId) {
+async function getStats(providerId) {
     try {
         // Retrieve canceled and rescheduled bookings for the specified provider
         const stats = await Booking.findAll({
             attributes: [
-                [sequelize.fn('COUNT', sequelize.literal('DISTINCT CASE WHEN status = "canceled" THEN id END')), 'canceledBookings'],
-                [sequelize.fn('COUNT', sequelize.literal('DISTINCT CASE WHEN status = "rescheduled" THEN id END')), 'rescheduledBookings'],
+                [fn('COUNT', literal('DISTINCT CASE WHEN status = "canceled" THEN id END')), 'canceledBookings'],
+                [fn('COUNT', literal('DISTINCT CASE WHEN status = "rescheduled" THEN id END')), 'rescheduledBookings'],
             ],
             where: {
                 provider: providerId,
-                [sequelize.Op.or]: [{ status: 'canceled' }, { status: 'rescheduled' }],
+                [Op.or]: [{ status: 'canceled' }, { status: 'rescheduled' }],
             },
         });
 
@@ -55,7 +57,7 @@ export async function getStats(providerId) {
 }
 
 // Function to get monthly statistics on credits used by a specific patient, including the percentage
-export async function getCreditsUsedStats(patientId) {
+async function getCreditsUsedStats(patientId) {
     try {
         // Retrieve total credits available for the specified patient
         const totalCreditsQuery = await Credit.sum('type', {
@@ -67,16 +69,16 @@ export async function getCreditsUsedStats(patientId) {
         // Retrieve monthly credits used by the specified patient
         const stats = await Booking.findAll({
             attributes: [
-                [sequelize.fn('SUM', sequelize.literal('CASE WHEN "Booking"."status" = "confirmed" THEN "Credit"."type" END')), 'totalCreditsUsed'],
-                [sequelize.fn('MONTH', sequelize.col('"Booking"."time"')), 'month'],
-                [sequelize.fn('YEAR', sequelize.col('"Booking"."time"')), 'year'],
+                [fn('SUM', literal('CASE WHEN "Booking"."status" = "confirmed" THEN "Credit"."type" END')), 'totalCreditsUsed'],
+                [fn('MONTH', col('"Booking"."time"')), 'month'],
+                [fn('YEAR', col('"Booking"."time"')), 'year'],
             ],
             include: [
                 {
                     model: Credit,
                     attributes: [],
                     where: {
-                        BookingId: sequelize.literal('"Booking"."id"'), // Match Credit to Booking
+                        BookingId: literal('"Booking"."id"'), // Match Credit to Booking
                     },
                 },
             ],
@@ -122,7 +124,7 @@ app.post('/bookings', async (req: Request, res: Response) => {
         const credit = await Credit.findOne({
             where: {
                 expirationDate: {
-                    [sequelize.Op.gt]: d, // Expiration date is greater than the current date
+                    [Op.gt]: d, // Expiration date is greater than the current date
                 },
                 BookingId: null, // Credit is not associated with any booking
             },
@@ -165,12 +167,14 @@ app.get('/bookings', async (req: Request, res: Response) => {
         // Retrieve bookings from the database for the specified user
         const bookings = await Booking.findAll({
             where: {
-                [sequelize.Op.or]: [{ patient: userId }, { provider: userId }],
+                [Op.or]: [{ patient: userId }, { provider: userId }],
             },
         });
 
-        let stats = [];
-        if (bookings?.[0].provider === userId) stats = await getStats(userId);
+        let stats: any[] = [];
+        if (bookings?.[0].provider === userId) {
+            stats = await getStats(userId);
+        }
 
         res.status(200).json({ bookings, stats });
     } catch (error) {

@@ -1,7 +1,7 @@
 import sequelize from "../db/client";
 
 export const findBooking = async () => {
-    ...
+    // ...
 
 }
 

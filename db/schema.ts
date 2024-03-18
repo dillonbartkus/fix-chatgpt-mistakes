@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, literal, define } from "sequelize";
 import sequelize from './client'
 
 // Define the Credit model
@@ -50,7 +50,7 @@ const BookingStatusHistory = sequelize.define('BookingStatusHistory', {
     timestamp: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+      defaultValue: DataTypes.NOW,
     },
   });
   
