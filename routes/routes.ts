@@ -1,5 +1,12 @@
 import express from 'express';
-import { postBooking, getBookings, getBookingHistory, getCredits, authorizeUser } from '../controller/controller';
+import {
+    postBooking,
+    getBookings,
+    getBookingHistory,
+    getCredits,
+    authorizeUser,
+} from '../controller/controller';
+
 const router = express.Router();
 
 // add route to authorize user and give JWT
