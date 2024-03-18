@@ -95,8 +95,8 @@ export async function executeQuery(query: string, params: Record<string, any> = 
     const connection = await sqlzClient.authenticate();
     try {
         // TODO: parse query and params, validate / sanitize to prevent unwanted behavior. Make sure you are returning the proper data
-        const [rows] = await connection.query(query, params);
-        return rows;
+        const [results, metadata] = await connection.query(query, params);
+        return [results, metadata];
     } catch (error) {
         throw error;
     }
