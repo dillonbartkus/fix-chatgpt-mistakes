@@ -40,7 +40,7 @@ export const postBooking = async (req: Request, res: Response) => {
 
         res.status(201).json({
             message: 'Booking created successfully',
-            booking: booking.toJSON(),
+            booking: booking,
         });
     } catch (error) {
         console.error('Error creating booking:', error);
